@@ -1,0 +1,15 @@
+Package: metametrics
+Title: explore metrics for sample annotation for genomic experiments
+Description: Provide metrics and methods for sample annotation in genomic experiments.
+Version: 0.0.0
+Author: Vince Carey
+Suggests: knitr
+Depends: R (>= 3.5.0), ssrch
+Maintainer: VJ Carey <stvjc@channing.harvard.edu>
+License: Artistic-2.0
+LazyLoad: yes
+LazyData: yes
+biocViews: Infrastructure, Annotation, Transcriptomics
+VignetteBuilder: knitr
+RoxygenNote: 6.1.1
+Encoding: UTF-8

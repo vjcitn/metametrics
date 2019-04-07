@@ -1,2 +1,1 @@
-# metametrics
-measuring content and utility of sample-level annotation in genomic experiments
+vignettes/metametrics.Rmd

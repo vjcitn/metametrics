@@ -1,0 +1,76 @@
+---
+title: "Semantic metrics for cancer corpus"
+author: "Vincent J. Carey, stvjc at channing.harvard.edu"
+date: "`r format(Sys.time(), '%B %d, %Y')`"
+vignette: >
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteIndexEntry{Semantic metrics for cancer corpus}
+  %\VignetteEncoding{UTF-8}
+output:
+  BiocStyle::html_document:
+    highlight: pygments
+    number_sections: yes
+    theme: united
+    toc: yes
+---
+
+All based on Sean Davis' [Omicidx](https://api-omicidx.cancerdatasci.org/sra/1.0/ui/)
+
+Basic ideas: does the set of fields in use in sample.attributes
+stabilize over time?  How do new fields emerge over time?
+
+We work with a subset of 1009 studies manifestly addressing cancer
+based on parsing study titles.
+
+```{r lk1}
+library(metametrics)
+data(study_publ_dates) # harvesting omicidx early 2019
+library(lubridate)
+load(DocSet_ca1009()) # produces ds_can1009b
+assign("zipf", csvs_ca1009(), envir=environment(ds_can1009b@doc_retriever))
+allstud = ls(docs2kw(ds_can1009b)) 
+```
+
+Here we assemble the cumulative (over time)
+word-bag of fields used in the sample annotation of the 1009 cancer studies.
+```{r lk2,cache=TRUE}
+study_publ_dates = na.omit(study_publ_dates)
+studs1009 = ls(docs2kw(ds_can1009b))  # in cancer corpus
+stud_dates = as_datetime(study_publ_dates[,2])
+names(stud_dates) = study_publ_dates[,1]
+stud_dates = stud_dates[studs1009]  # limit to corpus
+stud_dates = sort(stud_dates)
+ofields = lapply(names(stud_dates), 
+    function(x) names(retrieve_doc(x, ds_can1009b)))
+cumfields = ofields
+for (i in 2:length(cumfields)) cumfields[[i]] = 
+    union(cumfields[[i]], cumfields[[i-1]])
+csiz = sapply(cumfields,length)
+```
+
+The growth in word bag size over time:
+```{r lk3}
+plot(stud_dates, csiz)
+```
+
+```{r lkdi}
+library(ggplot2)
+library(plotly)
+ddf = data.frame(date=stud_dates[-1], bag_incr=diff(csiz),
+    study=paste0(names(stud_dates[-1]), "\na"))
+g1 = ggplot(ddf, aes(x=date, y=bag_incr, text=study)) + geom_point()
+```
+
+An interactive plot -- hover over points to get study
+accession number and "as-yet-unseen" field names.
+
+```{r ddd}
+incrs = lapply(2:length(cumfields), function(x) setdiff(cumfields[[x]],
+   cumfields[[x-1]]))
+incrs = unlist(lapply(incrs, function(x) paste0(x, collapse="\n")))
+sn = names(stud_dates[-1])
+incrs = paste(sn, incrs, sep="\n")
+dddf = cbind(ddf, incrs)
+g2 = ggplot(dddf, aes(x=date, y=bag_incr, text=incrs)) + geom_point()
+ggplotly(g2)
+```
