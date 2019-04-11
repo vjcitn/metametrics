@@ -33,7 +33,9 @@ putCa1009 = function(cache = BiocFileCache::BiocFileCache()) {
 #' @export
 DocSet_ca1009 = function(cache = BiocFileCache::BiocFileCache()) {
     if (!cameta_check_cache_DocSet(cache)) stop("run putCa1009 to populate BiocFileCache instance")
-    BiocFileCache::bfcrpath(cache, remote_DocSet())
+    ds = get(load(BiocFileCache::bfcrpath(cache, remote_DocSet())))
+    assign("zipf", csvs_ca1009(), envir=environment(ds@doc_retriever))
+    ds
 }
 
 #' @export

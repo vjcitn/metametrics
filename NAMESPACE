@@ -2,4 +2,6 @@
 
 export(DocSet_ca1009)
 export(csvs_ca1009)
+export(load_ontolookup)
+export(make_ontolookup)
 export(putCa1009)

@@ -1,7 +1,7 @@
 Package: metametrics
 Title: explore metrics for sample annotation for genomic experiments
 Description: Provide metrics and methods for sample annotation in genomic experiments.
-Version: 0.0.0
+Version: 0.0.2
 Author: Vince Carey
 Suggests: knitr
 Depends: R (>= 3.5.0), ssrch

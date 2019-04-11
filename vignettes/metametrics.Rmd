@@ -1,5 +1,5 @@
 ---
-title: "Semantic metrics for cancer corpus"
+title: "Metadata metrics for cancer corpus"
 author: "Vincent J. Carey, stvjc at channing.harvard.edu"
 date: "`r format(Sys.time(), '%B %d, %Y')`"
 vignette: >
@@ -14,63 +14,117 @@ output:
     toc: yes
 ---
 
-All based on Sean Davis' [Omicidx](https://api-omicidx.cancerdatasci.org/sra/1.0/ui/)
+```{r setup,echo=FALSE}
+suppressPackageStartupMessages({
+library(ggplot2)
+library(plotly)
+library(metametrics)
+library(ssrch)
+})
+```
 
-Basic ideas: does the set of fields in use in sample.attributes
-stabilize over time?  How do new fields emerge over time?
+# Basic observations on a corpus of human RNA-seq studies in cancer
 
-We work with a subset of 1009 studies manifestly addressing cancer
-based on parsing study titles.
+Using the Omicidx system, we harvested metadata about human samples
+for which RNA-seq data was deposited in NCBI SRA.
+
+We work with a subset of 1009 studies for which a cancer-related
+term was present in study title as recorded at NCBI SRA.
 
 ```{r lk1}
+library(ggplot2)
+library(plotly)
 library(metametrics)
 data(study_publ_dates) # harvesting omicidx early 2019
 library(lubridate)
-load(DocSet_ca1009()) # produces ds_can1009b
-assign("zipf", csvs_ca1009(), envir=environment(ds_can1009b@doc_retriever))
-allstud = ls(docs2kw(ds_can1009b)) 
+ds_ca = DocSet_ca1009()
+ds_ca
 ```
 
-Here we assemble the cumulative (over time)
-word-bag of fields used in the sample annotation of the 1009 cancer studies.
-```{r lk2,cache=TRUE}
+We accumulate (over dates of study submissions)
+the set of fields used in the sample annotation of the 1009 cancer studies.
+```{r lk2,cache=TRUE,echo=FALSE}
 study_publ_dates = na.omit(study_publ_dates)
-studs1009 = ls(docs2kw(ds_can1009b))  # in cancer corpus
+studs1009 = ls(docs2kw(ds_ca))  # in cancer corpus
 stud_dates = as_datetime(study_publ_dates[,2])
 names(stud_dates) = study_publ_dates[,1]
 stud_dates = stud_dates[studs1009]  # limit to corpus
 stud_dates = sort(stud_dates)
 ofields = lapply(names(stud_dates), 
-    function(x) names(retrieve_doc(x, ds_can1009b)))
+    function(x) names(retrieve_doc(x, ds_ca)))
+freqs = table(unlist(ofields))
+#sort(freqs,decreasing=TRUE)[1:20]
 cumfields = ofields
 for (i in 2:length(cumfields)) cumfields[[i]] = 
     union(cumfields[[i]], cumfields[[i-1]])
 csiz = sapply(cumfields,length)
+bag_fields_ca1009 = unique(unlist(cumfields))
+nfields = length(bag_fields_ca1009)
+mydf = data.frame(date_published=stud_dates, nfields=csiz)
 ```
 
-The growth in word bag size over time:
+The growth in size of the set of fields in use over time is displayed here:
+
 ```{r lk3}
-plot(stud_dates, csiz)
+ggplot(mydf, aes(x=date_published, y=nfields)) + geom_point()
 ```
 
-```{r lkdi}
-library(ggplot2)
+```{r lkdi,echo=FALSE}
 library(plotly)
-ddf = data.frame(date=stud_dates[-1], bag_incr=diff(csiz),
+ddf = data.frame(date=stud_dates[-1], newly_introduced_fields=diff(csiz),
     study=paste0(names(stud_dates[-1]), "\na"))
-g1 = ggplot(ddf, aes(x=date, y=bag_incr, text=study)) + geom_point()
 ```
 
-An interactive plot -- hover over points to get study
-accession number and "as-yet-unseen" field names.
+The next display is interactive -- hover over points to see study
+accession number and newly introduced field names.
 
-```{r ddd}
+```{r ddd,echo=FALSE,fig.width=6}
 incrs = lapply(2:length(cumfields), function(x) setdiff(cumfields[[x]],
    cumfields[[x-1]]))
 incrs = unlist(lapply(incrs, function(x) paste0(x, collapse="\n")))
 sn = names(stud_dates[-1])
 incrs = paste(sn, incrs, sep="\n")
 dddf = cbind(ddf, incrs)
-g2 = ggplot(dddf, aes(x=date, y=bag_incr, text=incrs)) + geom_point()
+g2 = ggplot(dddf, aes(x=date, y=newly_introduced_fields, text=incrs)) + geom_point()
 ggplotly(g2)
 ```
+
+# Reference resources for reducing metadata isolation and variability
+
+Use of common data elements is promoted by various initiatives.
+Dictionaries, thesauri, and ontologies are all relevant.  We have
+examples of each in the metametrics package.
+
+A snapshot of the Genomic Data Commons gdcdictionary, with fields
+and values related to diagnosis and sample characteristics is
+provided in `gdc_dx_sam`.
+```{r lkref}
+gdc_dx_sam
+```
+
+A table with all entries from several ontologies and the NCI Thesaurus
+is provided by `load_ontolookup`:
+```{r lkr2}
+olook = load_ontolookup()
+olook
+```
+
+## Statistics on field use
+
+We use robust linear modeling to estimate growth in
+vocabulary of fields employed over time.  The data.frame
+`mydf` includes a variable `nfields` taking a value
+for each study publication date.  The value of `nfields` associated
+with date $d$ records the
+the number of fields used to annotate all studies up
+to date $d$.
+
+```{r lknf}
+library(MASS)
+nsecpy = 3600*24*365
+summary( mm <- rlm(nfields~I(as.numeric(date_published)/nsecpy), data=mydf))
+plot(nfields~I(as.numeric(date_published)/nsecpy), data=mydf)
+abline(mm)
+```
+
+# Proximity of terms in use to endorsed terminologies
