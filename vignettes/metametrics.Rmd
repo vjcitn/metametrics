@@ -1,5 +1,5 @@
 ---
-title: "Metadata metrics for cancer corpus"
+title: "Metametrics: an R package with metadata metrics for annotation of genomic compendia"
 author: "Vincent J. Carey, stvjc at channing.harvard.edu"
 date: "`r format(Sys.time(), '%B %d, %Y')`"
 vignette: >
